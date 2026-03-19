@@ -1,0 +1,17 @@
+# Ignore everything first
+*
+
+# Re-include ONLY what the model needs (the Whitelist)
+!main.py
+!model.py
+!config.py
+!requirements.txt
+!utils/
+!best_model/
+!src/models/
+
+# Ignore junk inside the kept folders
+**/__pycache__/
+*.pyc
+.git/
+.ipynb_checkpoints/
