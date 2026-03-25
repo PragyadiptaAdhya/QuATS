@@ -2,7 +2,7 @@
 
 Official implementation of the **QuATS** Video Quality Assessment (VQA) framework, as presented in the QoMEX 2026 Grand Challenge.
 
-QuATS leverages the highly expressive embedding space of the **Qwen3-VL-Embedding 2B** multimodal vision-language model to predict perceptual quality scores[cite: 21, 29, 65]. [cite_start]By utilizing a stochastic uniform-sampling-based patching strategy, the model focuses on informative regions while significantly reducing computational complexity[cite: 10, 30].
+QuATS leverages the highly expressive embedding space of the **Qwen3-VL-Embedding 2B** multimodal vision-language model to predict perceptual quality scores. By utilizing a stochastic uniform-sampling-based patching strategy, the model focuses on informative regions while significantly reducing computational complexity.
 
 ## Key Features
 * **Backbone:** Qwen3-VL-Embedding 2B for rich visual representation.
@@ -17,8 +17,8 @@ Evaluation results on the Sport-ROI test set:
 
 | Model Variant | SROCC | PLCC | RMSE | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **QuATS-Fast** | 0.9403 | 0.9375 | 0.3528 | Optimized for inference speed. |
-| **QuATS-Robust** | 0.9617 | 0.9504 | 0.3151 | Mean of 5 stochastic passes for higher accuracy. |
+| **QuATS-Fast** | 0.9454 $\pm$ 0.0048 | 0.9523 $\pm$ 0.0040 |0.3091 $\pm$ 0.0124 | Optimized for inference speed. |
+| **QuATS-Robust** | 0.9443 $\pm$ 0.0013 | 0.9493 $\pm$ 0.0020 | 0.3185 $\pm$ 0.0060 | Mean of 5 stochastic passes for higher accuracy. |
 
 
 ![VQA Performance Scatter Plot](./vqa_scatter_plot_python.png)
