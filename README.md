@@ -17,8 +17,8 @@ Evaluation results on the Sport-ROI test set:
 
 | Model Variant | SROCC | PLCC | RMSE | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **QuATS-Fast** | 0.9466 $\pm$ 0.0041 | 0.9522 $\pm$ 0.0033 |0.3095 $\pm$ 0.0103  | Optimized for inference speed. |
-| **QuATS-Robust** | 0.9465 $\pm$ 0.0039 | 0.9549 $\pm$ 0.0013 | 0.3010 $\pm$ 0.0042 | Mean of 5 stochastic passes for higher accuracy. |
+| **QuATS-Fast** | 0.9494 $\pm$ 0.0111 | 0.9367 $\pm$ 0.0046 |0.3547 $\pm$ 0.0126  | Optimized for inference speed. |
+| **QuATS-Robust** | 0.9514 $\pm$ 0.0044 | 0.9423 $\pm$ 0.0023 | 0.3394 $\pm$ 0.0067 | Mean of 5 stochastic passes for higher accuracy. |
 
 
 ![VQA Performance Scatter Plot](./vqa_scatter_plot_python.png)
