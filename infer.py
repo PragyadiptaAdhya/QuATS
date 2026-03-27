@@ -8,14 +8,12 @@ from pathlib import Path
 from tqdm import tqdm
 from peft import load_peft_weights, set_peft_model_state_dict
 
-# Force Offline Mode for speed and reliability
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 from config import Config
 from utils.dataloader import get_video_frames
 from model import QwenVQAModel
-
 import transformers
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
@@ -61,17 +59,17 @@ def predict_video_quality(video_path: str, wrapper: QwenVQAModel, config: Config
 
 if __name__ == "__main__":
     cfg = Config()
-    best_dir = Path("best_model") 
-    
-    # --- MODE LOGIC ---
+    best_dir = cfg.OUTPUT_DIR / "best_model"
+    print(best_dir)
+
     is_fast = getattr(cfg, "FAST_MODE", False)
     n_runs = 1 if is_fast else 5
     mode_str = "FAST" if is_fast else "ROBUST"
     
     out_csv_file = f"inference_results_{mode_str.lower()}.csv"
-    out_csv = cfg.OUTPUT_DIR / out_csv_file
+    out_csv = cfg.INFERENCE_DIR / out_csv_file
     
-    # Ensure directory exists
+
     os.makedirs(out_csv.parent, exist_ok=True)
     
     try:
@@ -91,7 +89,6 @@ if __name__ == "__main__":
 
     print(f"\nMode: {mode_str} | Runs per video: {n_runs} | Total Videos: {len(videos)}")
 
-    # Header includes 'runs' count to clarify if it was averaged
     columns = ["observation", "video_name", "avg_predicted_score", "avg_mos_1_to_5", "total_inference_time", "runs"]
     pd.DataFrame(columns=columns).to_csv(out_csv, index=False)
     
@@ -108,14 +105,12 @@ if __name__ == "__main__":
                 run_times.append(time.time() - start_time)
                 run_scores.append(score)
                 
-                # VRAM cleanup inside the sub-loop to prevent buildup during 5 runs
+
                 torch.cuda.empty_cache()
 
-            # --- AGGREGATION ---
             avg_score = sum(run_scores) / len(run_scores)
             total_time = sum(run_times)
             
-            # Linear mapping 1-100 to 1-5
             avg_mos_1_to_5 = 1.0 + 4.0 * ((avg_score - 1) / 99.0)
             
             row_data = {

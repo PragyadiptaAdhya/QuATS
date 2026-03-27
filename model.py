@@ -1,11 +1,7 @@
-import sys
 from pathlib import Path
 from torch import nn
 from peft import LoraConfig, get_peft_model
-import warnings
-sys.path.append(str(Path("../").resolve()))
 from src.models.qwen3_vl_embedding import Qwen3VLEmbedder
-warnings.filterwarnings("ignore")
 class QwenVQAModel(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -19,7 +15,7 @@ class QwenVQAModel(nn.Module):
             fps=None
         )
         
-
+        # Applying your original video processor overrides
         vp = self.embedder.processor.video_processor
         vp.do_resize = False
         vp.max_frames = 100_000
@@ -52,7 +48,7 @@ class QwenVQAModel(nn.Module):
         last_hidden = outputs["last_hidden_state"]
         mask = outputs["attention_mask"].unsqueeze(-1)
         
-
+        # Masked Global Average Pooling
         summed = (last_hidden * mask).sum(dim=1)
         counts = mask.sum(dim=1).clamp(min=1e-6)
         return self.regressor(summed / counts).squeeze()

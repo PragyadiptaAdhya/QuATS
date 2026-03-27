@@ -70,7 +70,7 @@ if __name__ == "__main__":
     result_file_path = sys.argv[3]
 
     cfg = Config()
-    best_dir = Path("best_model") 
+    best_dir = cfg.OUTPUT_DIR / "best_model"
     
     try:
         model_wrapper = load_best_model(cfg, best_dir)

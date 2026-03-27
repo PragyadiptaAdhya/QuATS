@@ -1,5 +1,3 @@
-
-
 import torch
 import random
 import json
@@ -11,23 +9,18 @@ from torch.utils.data import DataLoader, Subset
 from collections import deque
 import os
 from config import Config
-from utils.dataloader import VQADataset, get_video_frames, seed_worker
+from utils.dataloader import VQADataset, seed_worker, vqa_collate_fn
 from model import QwenVQAModel
 import numpy as np
 from scipy.stats import pearsonr, spearmanr, kendalltau
 
 def set_seed(seed: int):
-
     os.environ['PYTHONHASHSEED'] = str(seed)
-
     random.seed(seed)
-
     np.random.seed(seed)
-
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed) 
-
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -48,50 +41,30 @@ class Trainer:
         self.mse_loss = torch.nn.MSELoss()
         self.pair_buffer = deque(maxlen=config.PAIR_BUFFER_SIZE)
         
-
         g = torch.Generator()
         g.manual_seed(config.SEED)
-        self.train_loader = DataLoader(VQADataset(config.TRAIN_CSV, config.TRAIN_VID_DIR),
-                                       batch_size=config.BATCH_SIZE, shuffle=True,
-                                       worker_init_fn=seed_worker, generator=g)
         
-
-        full_val_ds = VQADataset(config.VAL_CSV, config.VAL_VID_DIR)
+        # Parallel data loading
+        self.train_loader = DataLoader(
+            VQADataset(config.TRAIN_CSV, config.TRAIN_VID_DIR, config),
+            batch_size=config.BATCH_SIZE, shuffle=True,
+            worker_init_fn=seed_worker, generator=g,
+            collate_fn=vqa_collate_fn, num_workers=4, pin_memory=True
+        )
         
-
-        val_subset = torch.utils.data.Subset(full_val_ds, range(min(config.VAL_LEN, len(full_val_ds))))
-        
-
-        self.val_loader = DataLoader(val_subset, batch_size=config.BATCH_SIZE, shuffle=False)
+        full_val_ds = VQADataset(config.VAL_CSV, config.VAL_VID_DIR, config)
+        val_subset = Subset(full_val_ds, range(min(config.VAL_LEN, len(full_val_ds))))
+        self.val_loader = DataLoader(
+            val_subset, batch_size=config.BATCH_SIZE, shuffle=False,
+            collate_fn=vqa_collate_fn, num_workers=2
+        )
 
         self.start_epoch = 1
         self.best_val_loss = float("inf")
         self.train_losses, self.val_losses = [], []
-        
-        self.val_srcc = []
-        self.val_plcc = []
-        self.val_krcc = []
-        self.val_rmse = []
+        self.val_srcc, self.val_plcc, self.val_krcc, self.val_rmse = [], [], [], []
         
         self.load_checkpoint()
-        self.print_parameter_summary()
-
-    def print_parameter_summary(self):
-        trainable_params = 0
-        all_param = 0
-        
-        for name, param in self.wrapper.named_parameters():
-            all_param += param.numel()
-            if param.requires_grad:
-                trainable_params += param.numel()
-        
-        print(f"\n{'='*40}")
-        print(f"PARAMETER SUMMARY")
-        print(f"{'='*40}")
-        print(f"Trainable params: {trainable_params:,}")
-        print(f"All parameters:   {all_param:,}")
-        print(f"Percentage:       {100 * trainable_params / all_param:.4f}%")
-        print(f"{'='*40}\n")
 
     def load_checkpoint(self):
         ckpt_path = self.output_dir / "checkpoint_latest.pt"
@@ -103,8 +76,7 @@ class Trainer:
             self.optimizer.load_state_dict(ckpt['optimizer_state'])
             self.scaler.load_state_dict(ckpt['scaler_state'])
             self.start_epoch = ckpt['epoch'] + 1
-            self.train_losses = ckpt.get('train_losses', [])
-            self.val_losses = ckpt.get('val_losses', [])
+            self.train_losses, self.val_losses = ckpt.get('train_losses', []), ckpt.get('val_losses', [])
             self.best_val_loss = ckpt.get('best_val_loss', float("inf"))
             self.val_srcc = ckpt.get('val_srcc', [])
             self.val_plcc = ckpt.get('val_plcc', [])
@@ -113,28 +85,21 @@ class Trainer:
 
     def save_checkpoint(self, epoch):
         ckpt = {
-            'epoch': epoch,
-            'model_state': self.wrapper.model.state_dict(),
+            'epoch': epoch, 'model_state': self.wrapper.model.state_dict(),
             'regressor_state': self.wrapper.regressor.state_dict(),
-            'optimizer_state': self.optimizer.state_dict(),
-            'scaler_state': self.scaler.state_dict(),
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'best_val_loss': self.best_val_loss,
-            'val_srcc': self.val_srcc,
-            'val_plcc': self.val_plcc,
-            'val_krcc': self.val_krcc,
-            'val_rmse': self.val_rmse
+            'optimizer_state': self.optimizer.state_dict(), 'scaler_state': self.scaler.state_dict(),
+            'train_losses': self.train_losses, 'val_losses': self.val_losses,
+            'best_val_loss': self.best_val_loss, 'val_srcc': self.val_srcc,
+            'val_plcc': self.val_plcc, 'val_krcc': self.val_krcc, 'val_rmse': self.val_rmse
         }
         torch.save(ckpt, self.output_dir / "checkpoint_latest.pt")
-        
         epoch_dir = self.epochs_dir / f"epoch{epoch}"
         epoch_dir.mkdir(exist_ok=True)
         self.wrapper.model.save_pretrained(epoch_dir / "lora")
         torch.save(self.wrapper.regressor.state_dict(), epoch_dir / "regressor.pt")
 
-    def run_step(self, video_path, mos_score, backward=True):
-        frames, fps, _ = get_video_frames(video_path, num_frames=self.config.NUM_KEYFRAMES)
+    def run_step(self, batch_data, backward=True, step_idx=0, total_steps=1):
+        frames, fps, mos_score = batch_data
         conv = [self.wrapper.embedder.format_model_input(
             text=self.config.PROMPT, video=frames, fps=fps, max_frames=len(frames)
         )]
@@ -148,28 +113,35 @@ class Trainer:
             loss_rank = torch.tensor(0.0, device=pred.device)
             if self.config.USE_RANKING and len(self.pair_buffer) > 0:
                 p_pred, p_target = random.choice(self.pair_buffer)
-                y = 1.0 if target.item() > p_target else -1.0
+                
+                # Correct ternary logic to prevent noisy tie-breaker gradients
+                if target.item() > p_target: y = 1.0
+                elif target.item() < p_target: y = -1.0
+                else: y = 0.0
+                
                 loss_rank = torch.clamp(self.config.RANK_MARGIN - y * (pred - p_pred), min=0.0)
             
-            loss = loss_mse + self.config.LAMBDA_RANK * loss_rank
+            loss = (loss_mse + self.config.LAMBDA_RANK * loss_rank) / self.config.ACCUMULATION_STEPS
 
         if backward:
             self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-            self.optimizer.zero_grad()
+            
+            # Gradient Accumulation
+            if (step_idx + 1) % self.config.ACCUMULATION_STEPS == 0 or (step_idx + 1) == total_steps:
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                self.optimizer.zero_grad()
         
         self.pair_buffer.append((pred.detach(), target.item()))
-        
-        return loss.item(), pred.item(), target.item()
+        return loss.item() * self.config.ACCUMULATION_STEPS, pred.item(), target.item()
 
     def train(self):
         for epoch in range(self.start_epoch, self.config.MAX_EPOCHS + 1):
             self.wrapper.model.train(); self.wrapper.regressor.train()
             t_loss = 0.0
-            pbar = tqdm(self.train_loader, desc=f"Epoch {epoch} [Train]")
-            for vid_path, mos in pbar:
-                step_loss, _, _ = self.run_step(vid_path[0], mos[0], backward=True)
+            
+            for step_idx, batch_data in enumerate(tqdm(self.train_loader, desc=f"Epoch {epoch} [Train]")):
+                step_loss, _, _ = self.run_step(batch_data, backward=True, step_idx=step_idx, total_steps=len(self.train_loader))
                 t_loss += step_loss
             
             avg_t = t_loss / len(self.train_loader)
@@ -177,12 +149,11 @@ class Trainer:
 
             self.wrapper.model.eval(); self.wrapper.regressor.eval()
             v_loss = 0.0
-            val_preds = []
-            val_targets = []
+            val_preds, val_targets = [], []
             
             with torch.no_grad():
-                for vid_path, mos in tqdm(self.val_loader, desc=f"Epoch {epoch} [Val]"):
-                    step_loss, pred, target = self.run_step(vid_path[0], mos[0], backward=False)
+                for step_idx, batch_data in enumerate(tqdm(self.val_loader, desc=f"Epoch {epoch} [Val]")):
+                    step_loss, pred, target = self.run_step(batch_data, backward=False)
                     v_loss += step_loss
                     val_preds.append(pred)
                     val_targets.append(target)
@@ -190,8 +161,7 @@ class Trainer:
             avg_v = v_loss / len(self.val_loader)
             self.val_losses.append(avg_v)
             
-            y_pred = np.array(val_preds)
-            y_true = np.array(val_targets)
+            y_pred, y_true = np.array(val_preds), np.array(val_targets)
             
             if np.std(y_pred) == 0 or np.std(y_true) == 0:
                 plcc, srcc, krcc = 0.0, 0.0, 0.0
@@ -218,7 +188,6 @@ class Trainer:
                 torch.save(self.wrapper.regressor.state_dict(), best_dir / "regressor.pt")
             
             self.save_checkpoint(epoch)
-
             metrics = {
                 "train_loss": self.train_losses, 
                 "val_loss": self.val_losses,
