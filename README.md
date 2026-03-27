@@ -17,8 +17,8 @@ Evaluation results on the Sport-ROI test set:
 
 | Model Variant | SROCC | PLCC | RMSE | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **QuATS-Fast** | 0.9494 $\pm$ 0.0111 | 0.9367 $\pm$ 0.0046 |0.3547 $\pm$ 0.0126  | Optimized for inference speed. |
-| **QuATS-Robust** | 0.9514 $\pm$ 0.0044 | 0.9423 $\pm$ 0.0023 | 0.3394 $\pm$ 0.0067 | Mean of 5 stochastic passes for higher accuracy. |
+| **QuATS-Fast** | 0.9474 $\pm$ 0.0033| 0.9546 $\pm$ 0.0025 |0.3117 $\pm$ 0.0081  | Optimized for inference speed. |
+| **QuATS-Robust** | 0.9533 $\pm$ 0.0023 | 0.9588 $\pm$ 0.0019 | 0.3078 $\pm$ 0.0066 | Mean of 5 stochastic passes for higher accuracy. |
 
 
 <p align="center"> <img src="./plot_fast.png" width="48%" /> <img src="./plot_robust.png" width="48%" /> <br> <em>Performance comparison between Fast Mode (left) and Robust Mode (right) showing linear curve fit thorugh the data.</em> </p>
@@ -70,6 +70,12 @@ Once you have edited the paths in the config.py, run the following command to tr
 The inference script reads the test data path and inference mode from config.py; edit it accordingly. Once done, run the following command. 
 ```bash
     python3 infer.py
+```
+Once done, it will create a CSV file in your output directory as given in the repository.
+
+To perform a combined inference across Fast and Robust modes across NUM_EVAL_LOOPS number of times,
+```bash
+    python3 infer_complete.py
 ```
 Once done, it will create a CSV file in your output directory as given in the repository.
 
