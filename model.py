@@ -15,7 +15,7 @@ class QwenVQAModel(nn.Module):
             fps=None
         )
         
-        # Applying your original video processor overrides
+
         vp = self.embedder.processor.video_processor
         vp.do_resize = False
         vp.max_frames = 100_000
