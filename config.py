@@ -46,4 +46,4 @@ class Config:
     
     # Prompt
     PROMPT         = ""
-    FAST_MODE      = True
+    FAST_MODE      = False
