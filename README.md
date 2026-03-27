@@ -21,7 +21,7 @@ Evaluation results on the Sport-ROI test set:
 | **QuATS-Robust** | 0.9514 $\pm$ 0.0044 | 0.9423 $\pm$ 0.0023 | 0.3394 $\pm$ 0.0067 | Mean of 5 stochastic passes for higher accuracy. |
 
 
-![VQA Performance Scatter Plot](./vqa_scatter_plot_python.png)
+<p align="center"> <img src="./plot_fast.png" width="48%" /> <img src="./plot_robust.png" width="48%" /> <br> <em>Performance comparison between Fast Mode (left) and Robust Mode (right) showing linear curve fit thorugh the data.</em> </p>
 Fig. 1: Correlation between QuATS predicted scores and Ground Truth Mean Opinion Scores (MOS) on the Sport-ROI dataset.
 ---
 
