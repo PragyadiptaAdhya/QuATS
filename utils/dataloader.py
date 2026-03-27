@@ -14,7 +14,6 @@ def seed_worker(worker_id):
     random.seed(worker_seed)
 
 def vqa_collate_fn(batch):
-    # Bypass standard collation for lists of PIL images
     return batch[0]
 
 def get_video_frames(video_path, num_frames=None):
@@ -30,7 +29,6 @@ def get_video_frames(video_path, num_frames=None):
     effective_fps = len(indices) / (total_frames / orig_fps)
     processed_images = []
     
-    # Extract frame-by-frame to prevent RAM explosion
     for idx in indices:
         frame_array = vr[idx].asnumpy()
         patched_grid = extract_uniform_random_patches(frame_array)
@@ -52,7 +50,6 @@ class VQADataset(Dataset):
         return len(self.samples)
     
     def __getitem__(self, idx):
-        # Heavy lifting moved here so PyTorch workers can do this in the background
         video_path, mos = self.samples[idx]
         frames, fps, _ = get_video_frames(video_path, num_frames=self.config.NUM_KEYFRAMES)
         return frames, fps, mos

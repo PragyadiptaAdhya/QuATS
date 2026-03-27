@@ -15,11 +15,9 @@ def process_video(video_path, output_dir="outputs_mapped", num_frames=4):
     if total_frames <= 0:
         raise ValueError("Could not determine total frame count.")
 
-    # Select evenly spaced frame indices
     indices = [int(i * total_frames / num_frames) for i in range(num_frames)]
 
     for idx, frame_idx in enumerate(indices):
-        # Jump to frame
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         ret, frame = cap.read()
 
@@ -27,17 +25,13 @@ def process_video(video_path, output_dir="outputs_mapped", num_frames=4):
             print(f"Skipping frame {frame_idx} (could not read).")
             continue
 
-        # Convert BGR -> RGB
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Run patch extraction
         patched = extract_uniform_random_patches(frame_rgb)
 
-        # Convert back RGB -> BGR
         frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
         patched_bgr = cv2.cvtColor(patched, cv2.COLOR_RGB2BGR)
 
-        # Save
         frame_path = os.path.join(output_dir, f"frame_{idx}.png")
         patched_path = os.path.join(output_dir, f"patched_{idx}.png")
 

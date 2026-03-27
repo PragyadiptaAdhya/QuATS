@@ -3,14 +3,14 @@ from pathlib import Path
 
 class Config:
     # Paths
-    TRAIN_CSV      = "/data/padhya/QoMEX/QoMEX-GC/split_videos/train_videos.csv"
-    VAL_CSV        = "/data/padhya/QoMEX/QoMEX-GC/split_videos/val_videos.csv"
-    TRAIN_VID_DIR  = "/data/padhya/QoMEX/QoMEX-GC/split_videos/train"
-    VAL_VID_DIR    = "/data/padhya/QoMEX/QoMEX-GC/split_videos/val"
+    TRAIN_CSV      = "" ##Train data csv
+    VAL_CSV        = "" ##Validation data csv
+    TRAIN_VID_DIR  = "" ##Train videos directory
+    VAL_VID_DIR    = "" ##Validation videos directory
     OUTPUT_DIR     = Path("UniformSamplingPatch64PromptF")
     INFERENCE_DIR  = Path("inference_results")
-    TEST_VID_DIR   = "/data/padhya/QoMEX/QoMEX-GC/split_videos/combined_test_val"
-    TEST_CSV       = "/data/padhya/QoMEX/QoMEX-GC/split_videos/combined_test_val.csv"
+    TEST_VID_DIR   = "" ##Test video directory
+    TEST_CSV       = "" ##Test video score csv
 
     SIMILAR_MOS_THRESHOLD = 0.25
     NUM_EVAL_LOOPS = 5
